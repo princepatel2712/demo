@@ -1,4 +1,4 @@
-from .serializers import UserModelSerializer, LoginSerializer, PostModelSerializer, FollowSerializer
+from .serializers import UserModelSerializer, LoginSerializer, PostModelSerializer, FollowSerializer, UnfollowSerializer
 from .models import Follow
 from rest_framework_simplejwt.tokens import AccessToken
 from django.shortcuts import get_object_or_404
@@ -64,18 +64,18 @@ class FollowCreateView(generics.CreateAPIView):
         serializer.save(follower=self.request.user)
 
 
-class UnfollowView(generics.DestroyAPIView):
+class UnfollowCreateView(generics.CreateAPIView):
+    serializer_class = UnfollowSerializer
     permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [BasicAuthentication]
 
-    def delete(self, request, *args, **kwargs):
-        user_id = self.kwargs.get('user_id')
-        try:
-            user_to_unfollow = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    def get_queryset(self):
+        return Follow.objects.filter(follower=self.request.user)
 
-        follow = Follow.objects.filter(follower=request.user, following=user_to_unfollow).first()
-        if not follow:
-            return Response({'message': 'User is not followed'}, status=status.HTTP_400_BAD_REQUEST)
-        follow.delete()
-        return Response({'message': 'User unfollowed successfully'}, status=status.HTTP_204_NO_CONTENT)
+    def perform_create(self, serializer):
+        following_id = serializer.validated_data['following']
+        if following_id == self.request.user.id:
+            raise ValidationError("You cannot unfollow yourself.")
+        if not Follow.objects.filter(follower=self.request.user, following_id=following_id).exists():
+            raise ValidationError("You are not following this user.")
+        serializer.save(follower=self.request.user)

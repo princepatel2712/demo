@@ -65,3 +65,9 @@ class FollowSerializer(serializers.ModelSerializer):
         fields = ['following']
 
 
+class UnfollowSerializer(serializers.ModelSerializer):
+    following = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+
+    class Meta:
+        model = Follow
+        fields = ['following']
