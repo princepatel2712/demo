@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from rest_framework import generics, permissions, views, status
 from rest_framework.response import Response
 from rest_framework.authentication import BasicAuthentication
+from rest_framework.serializers import ValidationError
 
 
 class RegisterView(generics.CreateAPIView):
@@ -45,14 +46,21 @@ class PostView(generics.CreateAPIView):
 
 
 class FollowCreateView(generics.CreateAPIView):
+    queryset = User.objects.all()
     serializer_class = FollowSerializer
     permission_classes = [permissions.IsAuthenticated]
     authentication_classes = [BasicAuthentication]
 
-    def get_queryset(self):
-        return User.objects.exclude(id=self.request.user.id)
-
     def perform_create(self, serializer):
+        following_user = serializer.validated_data.get('following')
+        if following_user == self.request.user:
+            raise ValidationError("You cannot follow yourself.")
+        already_following = Follow.objects.filter(
+            follower=self.request.user,
+            following=following_user
+        ).exists()
+        if already_following:
+            raise ValidationError("You are already following this user.")
         serializer.save(follower=self.request.user)
 
 

@@ -64,7 +64,4 @@ class FollowSerializer(serializers.ModelSerializer):
         model = Follow
         fields = ['following']
 
-    def create(self, validated_data):
-        validated_data['follower'] = self.context['request'].user
-        return super().create(validated_data)
 
