@@ -39,15 +39,27 @@ class LoginSerializer(serializers.Serializer):
 
 
 class LikeSerializer(serializers.ModelSerializer):
+    post_id = serializers.IntegerField()
+
     class Meta:
         model = Like
-        fields = "__all__"
+        fields = ['post_id']
+
+
+class DisLikeSerializer(serializers.ModelSerializer):
+    post_id = serializers.IntegerField()
+
+    class Meta:
+        model = Dislike
+        fields = ['post_id']
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    post_id = serializers.IntegerField()
+
     class Meta:
         model = Comment
-        fields = "__all__"
+        fields = ['post_id', 'text']
 
 
 class PostModelSerializer(serializers.ModelSerializer):
@@ -60,14 +72,6 @@ class PostModelSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Follow
-        fields = ['following']
-
-
-class UnfollowSerializer(serializers.ModelSerializer):
-    following = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-
     class Meta:
         model = Follow
         fields = ['following']

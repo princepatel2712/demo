@@ -1,8 +1,7 @@
-from .serializers import UserModelSerializer, LoginSerializer, PostModelSerializer, FollowSerializer, UnfollowSerializer
-from .models import Follow
+from .serializers import UserModelSerializer, LoginSerializer, PostModelSerializer, FollowSerializer, LikeSerializer, \
+    DisLikeSerializer, CommentSerializer
+from .models import Follow, Like, Post, Dislike, Comment
 from rest_framework_simplejwt.tokens import AccessToken
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
 from rest_framework import generics, permissions, views, status
 from rest_framework.response import Response
 from rest_framework.authentication import BasicAuthentication
@@ -37,6 +36,7 @@ class LoginView(views.APIView):
 class PostView(generics.CreateAPIView):
     serializer_class = PostModelSerializer
     permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [BasicAuthentication]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -45,8 +45,60 @@ class PostView(generics.CreateAPIView):
         return self.create(request, *args, **kwargs)
 
 
+class LikeView(generics.CreateAPIView):
+    queryset = Like.objects.all()
+    serializer_class = LikeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [BasicAuthentication]
+
+    def perform_create(self, serializer):
+        post_id = serializer.validated_data.get('post_id')
+        try:
+            post = Post.objects.get(pk=post_id)
+        except Post.DoesNotExist:
+            raise ValidationError({'error': 'Post does not exist.'})
+
+        if Like.objects.filter(user=self.request.user, post=post).exists():
+            raise ValidationError({'error': 'You have already liked this post.'})
+        serializer.save(user=self.request.user, post=post)
+
+
+class DislikeView(generics.CreateAPIView):
+    queryset = Dislike.objects.all()
+    serializer_class = DisLikeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [BasicAuthentication]
+
+    def perform_create(self, serializer):
+        post_id = serializer.validated_data.get('post_id')
+        try:
+            post = Post.objects.get(pk=post_id)
+        except Post.DoesNotExist:
+            raise ValidationError({'error': 'Post does not exist.'})
+        if Dislike.objects.filter(user=self.request.user, post=post).exists():
+            raise ValidationError({'error': 'You have already disliked this post.'})
+        serializer.save(user=self.request.user, post=post)
+
+
+class CommentView(generics.CreateAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [BasicAuthentication]
+
+    def perform_create(self, serializer):
+        post_id = serializer.validated_data.get('post_id')
+        try:
+            post = Post.objects.get(pk=post_id)
+        except Post.DoesNotExist:
+            raise ValidationError({'error': 'Post does not exist.'})
+        if Comment.objects.filter(user=self.request.user, post=post).exists():
+            raise ValidationError({'error': 'You have already commented on this post.'})
+        serializer.save(user=self.request.user, post=post)
+
+
 class FollowCreateView(generics.CreateAPIView):
-    queryset = User.objects.all()
+    queryset = Follow.objects.all()
     serializer_class = FollowSerializer
     permission_classes = [permissions.IsAuthenticated]
     authentication_classes = [BasicAuthentication]
@@ -55,27 +107,7 @@ class FollowCreateView(generics.CreateAPIView):
         following_user = serializer.validated_data.get('following')
         if following_user == self.request.user:
             raise ValidationError("You cannot follow yourself.")
-        already_following = Follow.objects.filter(
-            follower=self.request.user,
-            following=following_user
-        ).exists()
+        already_following = Follow.objects.filter(follower=self.request.user, following=following_user).exists()
         if already_following:
             raise ValidationError("You are already following this user.")
-        serializer.save(follower=self.request.user)
-
-
-class UnfollowCreateView(generics.CreateAPIView):
-    serializer_class = UnfollowSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    authentication_classes = [BasicAuthentication]
-
-    def get_queryset(self):
-        return Follow.objects.filter(follower=self.request.user)
-
-    def perform_create(self, serializer):
-        following_id = serializer.validated_data['following']
-        if following_id == self.request.user.id:
-            raise ValidationError("You cannot unfollow yourself.")
-        if not Follow.objects.filter(follower=self.request.user, following_id=following_id).exists():
-            raise ValidationError("You are not following this user.")
         serializer.save(follower=self.request.user)

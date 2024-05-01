@@ -9,7 +9,7 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.first_name} {self.user.last_name}"
+        return f"POST_ID = {self.id}"
 
 
 class Comment(models.Model):
@@ -18,15 +18,24 @@ class Comment(models.Model):
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.user.username} commented on POST_ID = {self.post.id}"
+
 
 class Like(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
 
+    def __str__(self):
+        return f"{self.user.username} liked POST_ID = {self.post.id}"
+
 
 class Dislike(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='dislikes')
+
+    def __str__(self):
+        return f"{self.user.username} disliked POST_ID = {self.post.id}"
 
 
 class Follow(models.Model):
