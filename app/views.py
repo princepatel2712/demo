@@ -57,10 +57,13 @@ class LikeView(generics.CreateAPIView):
             post = Post.objects.get(pk=post_id)
         except Post.DoesNotExist:
             raise ValidationError({'error': 'Post does not exist.'})
-
-        if Like.objects.filter(user=self.request.user, post=post).exists():
+        user = self.request.user
+        existing_dislike = Dislike.objects.filter(user=user, post=post).first()
+        if existing_dislike:
+            existing_dislike.delete()
+        if Like.objects.filter(user=user, post=post).exists():
             raise ValidationError({'error': 'You have already liked this post.'})
-        serializer.save(user=self.request.user, post=post)
+        serializer.save(user=user, post=post)
 
 
 class DislikeView(generics.CreateAPIView):
@@ -75,9 +78,13 @@ class DislikeView(generics.CreateAPIView):
             post = Post.objects.get(pk=post_id)
         except Post.DoesNotExist:
             raise ValidationError({'error': 'Post does not exist.'})
-        if Dislike.objects.filter(user=self.request.user, post=post).exists():
+        user = self.request.user
+        existing_like = Like.objects.filter(user=user, post=post).first()
+        if existing_like:
+            existing_like.delete()
+        if Dislike.objects.filter(user=user, post=post).exists():
             raise ValidationError({'error': 'You have already disliked this post.'})
-        serializer.save(user=self.request.user, post=post)
+        serializer.save(user=user, post=post)
 
 
 class CommentView(generics.CreateAPIView):
@@ -111,3 +118,22 @@ class FollowCreateView(generics.CreateAPIView):
         if already_following:
             raise ValidationError("You are already following this user.")
         serializer.save(follower=self.request.user)
+
+
+class UnfollowView(generics.DestroyAPIView):
+    queryset = Follow.objects.all()
+    serializer_class = FollowSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [BasicAuthentication]
+
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        user_to_unfollow_id = kwargs.get('user_id')
+        if user.id == int(user_to_unfollow_id):
+            return Response({'error': 'You cannot unfollow yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            follow_instance = Follow.objects.get(follower=user.id, following=user_to_unfollow_id)
+        except Follow.DoesNotExist:
+            return Response({'error': 'You are not following this user.'}, status=status.HTTP_400_BAD_REQUEST)
+        follow_instance.delete()
+        return Response({'message': 'Unfollowed successfully.'}, status=status.HTTP_200_OK)
