@@ -45,6 +45,37 @@ class PostView(generics.CreateAPIView):
         return self.create(request, *args, **kwargs)
 
 
+class PostUpdateView(generics.UpdateAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostModelSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [BasicAuthentication]
+    lookup_field = "pk"
+
+    def update(self, request, *args, **kwargs):
+        if request.method not in ['PUT', 'PATCH']:
+            return Response({'message': 'Only PUT and PATCH methods are allowed.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        instance = self.get_object()
+        if instance.user != request.user:
+            return Response({'message': 'You can only update your own posts.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def get_queryset(self):
+        user = self.request.user
+        return Post.objects.filter(user=user)
+
+    def patch(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.partial_update(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
+
 class LikeView(generics.CreateAPIView):
     queryset = Like.objects.all()
     serializer_class = LikeSerializer
