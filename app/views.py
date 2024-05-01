@@ -137,3 +137,35 @@ class UnfollowView(generics.DestroyAPIView):
             return Response({'error': 'You are not following this user.'}, status=status.HTTP_400_BAD_REQUEST)
         follow_instance.delete()
         return Response({'message': 'Unfollowed successfully.'}, status=status.HTTP_200_OK)
+
+
+class ListOwnFollower(generics.ListAPIView):
+    queryset = Follow.objects.all()
+    serializer_class = FollowSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [BasicAuthentication]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Follow.objects.filter(following=user)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        follower_name = [follow.follower.username for follow in queryset]
+        return Response({'followers-username': follower_name})
+
+
+class ListOwnFollowing(generics.ListAPIView):
+    queryset = Follow.objects.all()
+    serializer_class = FollowSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [BasicAuthentication]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Follow.objects.filter(follower=user)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        follower_name = [follow.following.username for follow in queryset]
+        return Response({'following-username': follower_name})
