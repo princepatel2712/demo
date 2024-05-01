@@ -14,7 +14,7 @@ class RegisterView(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        print('mail sent fun')
+        print('mail send function')
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return Response({'message': 'User registered successfully'}, status=201)
