@@ -42,6 +42,7 @@ class PostView(generics.CreateAPIView):
         serializer.save(user=self.request.user)
 
     def post(self, request, *args, **kwargs):
+
         return self.create(request, *args, **kwargs)
 
 
