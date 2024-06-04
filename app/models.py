@@ -1,11 +1,15 @@
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.contrib.auth.models import User
 
 
 class Post(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
-    content = models.TextField()
+    content = models.TextField(default='')
+    image = models.ImageField(upload_to='images_uploaded', null=True)
+    video = models.FileField(upload_to='videos_uploaded', null=True, validators=[
+        FileExtensionValidator(allowed_extensions=['MOV', 'avi', 'mp4', 'webm', 'mkv'])])
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
